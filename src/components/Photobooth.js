@@ -17,6 +17,10 @@ const videoConstraints = { width: 953, height: 599, facingMode: "user" };
 const SLOT_WIDTH = 953;
 const SLOT_HEIGHT = 599;
 
+// ukuran tampilan frame di layar (ubah di sini kalau mau lebih besar/kecil)
+const CANVAS_DISPLAY_WIDTH = 260;
+const CANVAS_DISPLAY_HEIGHT = 650;
+
 // dipindah ke luar komponen supaya tidak dibuat ulang tiap render
 const slots = [
     { x: 123, y: 78 },
@@ -466,8 +470,8 @@ export default function PhotoBooth() {
                             <canvas
                                 ref={canvasRef}
                                 style={{
-                                    width: 200,
-                                    height: 500,
+                                    width: CANVAS_DISPLAY_WIDTH,
+                                    height: CANVAS_DISPLAY_HEIGHT,
                                     borderRadius: 16,
                                     boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
                                 }}
@@ -543,7 +547,7 @@ const titleBar = {
 };
 
 const mainContent = {
-    height: 600,
+    height: 760,
     width: 700,
     display: "flex",
     justifyContent: "center",
