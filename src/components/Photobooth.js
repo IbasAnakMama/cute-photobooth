@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import Webcam from "react-webcam";
 
 const frameOptions = [
@@ -18,20 +18,25 @@ const videoConstraints = { width: 953, height: 599, facingMode: "user" };
 const SLOT_WIDTH = 953;
 const SLOT_HEIGHT = 599;
 
+// ukuran tampilan frame di layar (ubah di sini kalau mau lebih besar/kecil)
+const CANVAS_DISPLAY_WIDTH = 260;
+const CANVAS_DISPLAY_HEIGHT = 650;
+
+// dipindah ke luar komponen supaya tidak dibuat ulang tiap render
+const slots = [
+    { x: 123, y: 78 },
+    { x: 123, y: 697 },
+    { x: 123, y: 1286 },
+    { x: 123, y: 1885 }
+];
 
 export default function PhotoBooth() {
     const webcamRef = useRef(null);
     const canvasRef = useRef(null);
     const frameImgRef = useRef(null);
 
-    const slots = [
-        { x: 123, y: 78 },
-        { x: 123, y: 697 },
-        { x: 123, y: 1286 },
-        { x: 123, y: 1885 }
-    ];
-
     const [selectedFrame, setSelectedFrame] = useState(null);
+    const [frameReady, setFrameReady] = useState(0);
     const [mode, setMode] = useState("photo");
 
     const [photos, setPhotos] = useState([]);
@@ -44,23 +49,9 @@ export default function PhotoBooth() {
     const [stickers, setStickers] = useState([]);
     const [draggingSticker, setDraggingSticker] = useState(null);
     const [selectedSticker, setSelectedSticker] = useState(null);
-    const row = { display: "flex", gap: 40, alignItems: "flex-start" };
 
-    // useEffects
-
-    // frames
-    useEffect(() => {
-        if (!selectedFrame) return;
-        const img = new Image();
-        img.src = selectedFrame;
-
-        img.onload = () => {
-            frameImgRef.current = img;
-            drawCanvas();
-        }
-    }, [selectedFrame]);
-
-    const drawCanvas = () => {
+    // draw canvas
+    const drawCanvas = useCallback(() => {
         const canvas = canvasRef.current;
         if (!canvas || !frameImgRef.current) return;
 
@@ -87,7 +78,8 @@ export default function PhotoBooth() {
             ctx.drawImage(p.img, dx, dy, drawW, drawH);
             ctx.restore();
         });
-                ctx.drawImage(frameImgRef.current, 0, 0, frameWidth, frameHeight);
+
+        ctx.drawImage(frameImgRef.current, 0, 0, frameWidth, frameHeight);
 
         stickers.forEach((s, i) => {
             ctx.drawImage(s.img, s.x, s.y, 150, 150);
@@ -97,12 +89,29 @@ export default function PhotoBooth() {
                 ctx.strokeRect(s.x, s.y, 150, 150);
             }
         });
-    };
+    }, [photos, stickers, selectedSticker]);
 
-    useEffect(drawCanvas, [photos, stickers, selectedSticker, photoCount]);
+    // useEffects
+
+    // load frame
+    useEffect(() => {
+        if (!selectedFrame) return;
+        const img = new Image();
+        img.src = selectedFrame;
+
+        img.onload = () => {
+            frameImgRef.current = img;
+            setFrameReady(n => n + 1);
+        };
+    }, [selectedFrame]);
+
+    // redraw tiap ada perubahan
+    useEffect(() => {
+        drawCanvas();
+    }, [drawCanvas, frameReady, photoCount]);
 
     const handleBack = () => {
-        if (mode == "decorate") {
+        if (mode === "decorate") {
             setMode("photo");
             setCanTakePhoto(false);
             setStickers([]);
@@ -208,7 +217,7 @@ export default function PhotoBooth() {
                 const w = p.img.width * p.scale;
                 const h = p.img.height * p.scale;
 
-                if(
+                if (
                     x >= slot.x + p.offsetX &&
                     x <= slot.x + p.offsetX + w &&
                     y >= slot.y + p.offsetY &&
@@ -221,17 +230,16 @@ export default function PhotoBooth() {
                     });
                     return;
                 }
-
             }
         }
 
         if (mode === "decorate") {
-            for(let i = stickers.length - 1; i >= 0; i --){
+            for (let i = stickers.length - 1; i >= 0; i--) {
                 const s = stickers[i];
-                if (x >= s.x && x <= s.x + 150 && y>= s.y && y <= s.y + 150) {
+                if (x >= s.x && x <= s.x + 150 && y >= s.y && y <= s.y + 150) {
                     setDraggingSticker(i);
                     setSelectedSticker(i);
-                    setDragOffset({x: x-s.x, y: y-s.y});
+                    setDragOffset({ x: x - s.x, y: y - s.y });
                     return;
                 }
             }
@@ -239,7 +247,7 @@ export default function PhotoBooth() {
     };
 
     const handleMouseMove = e => {
-        const {x,y} = getCoords(e);
+        const { x, y } = getCoords(e);
 
         if (draggingPhoto !== null && mode === "photo") {
             setPhotos(prev => {
@@ -252,13 +260,13 @@ export default function PhotoBooth() {
                 p.offsetX = x - slot.x - dragOffset.x;
                 p.offsetY = y - slot.y - dragOffset.y;
                 p.offsetX = Math.min(Math.max(p.offsetX, SLOT_WIDTH - w), 0);
-                p.offsetY = Math.min(Math.max(p.offsetY, SLOT_HEIGHT - h),0);
+                p.offsetY = Math.min(Math.max(p.offsetY, SLOT_HEIGHT - h), 0);
 
                 return updated;
             });
         }
 
-        if (draggingSticker != null && mode === "decorate") {
+        if (draggingSticker !== null && mode === "decorate") {
             setStickers(s => {
                 const u = [...s];
                 u[draggingSticker] = {
@@ -281,7 +289,7 @@ export default function PhotoBooth() {
         const img = new Image();
         img.src = src;
         img.onload = () =>
-            setStickers(s => [...s, {img, x: 400, y: 100}]);
+            setStickers(s => [...s, { img, x: 400, y: 100 }]);
     };
 
     // delete Sticker
@@ -289,23 +297,22 @@ export default function PhotoBooth() {
         const handleKeyDown = e => {
             if (
                 (e.key === "Delete" || e.key === "Backspace") &&
-                selectedSticker != null &&
+                selectedSticker !== null &&
                 mode === "decorate"
-            ){
-                setStickers(s => s.filter((_,i) => i != selectedSticker));
+            ) {
+                setStickers(s => s.filter((_, i) => i !== selectedSticker));
                 setSelectedSticker(null);
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [selectedSticker,mode]);
+    }, [selectedSticker, mode]);
 
-    //download
-
+    // download
     const downloadPhoto = () => {
         const a = document.createElement("a");
-        a.href= canvasRef.current.toDataURL("image.png");
+        a.href = canvasRef.current.toDataURL("image/png");
         a.download = "photo-strip.png";
         a.click();
     };
@@ -328,8 +335,10 @@ export default function PhotoBooth() {
                             alignItems: "center",
                             justifyContent: "center",
                         }}
-                    onClick={handleBack}
-                    > ← Back</button>
+                        onClick={handleBack}
+                    >
+                        ← Back
+                    </button>
                 )}
 
                 <h1 style={titleBar}>
@@ -338,10 +347,10 @@ export default function PhotoBooth() {
                         : mode === "photo"
                             ? "⋆｡‧˚ʚ Smile :)ɞ˚‧｡⋆"
                             : ". ݁₊ ⊹ . ݁Let’s decorate . ⊹ ₊ ݁."}
-
                 </h1>
             </div>
-            <div style={mainContent} >
+
+            <div style={mainContent}>
                 {!selectedFrame ? (
                     <div style={{ display: "flex", gap: 24 }}>
                         {frameOptions.map((src) => {
@@ -360,7 +369,6 @@ export default function PhotoBooth() {
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.transform = "scale(1)";
                                         e.currentTarget.style.boxShadow = frameThumb.boxShadow;
-
                                     }}
                                     style={{
                                         ...frameThumb,
@@ -368,9 +376,8 @@ export default function PhotoBooth() {
                                         transition: "transform 0.25s ease, box-shadow 0.25s ease",
                                         boxShadow: isSelected ? "0 12px 30px rgba(255,122,162,0.45)" : frameThumb.boxShadow,
                                     }}
-
                                 />
-                            )
+                            );
                         })}
                     </div>
                 ) : (
@@ -378,121 +385,121 @@ export default function PhotoBooth() {
                         <div>
                             {mode === "photo" && (
                                 <>
-                                    <div style= {{position: "relative", width: 400 }}>
+                                    <div style={{ position: "relative", width: 400 }}>
                                         {/* Webcam */}
                                         <Webcam
                                             audio={false}
                                             ref={webcamRef}
                                             screenshotFormat="image/png"
-                                            videoConstraints = {videoConstraints}
-                                            mirrored = {true}
-                                            style={{ width: "100%", borderRadius: 12}}
-                                            />
+                                            videoConstraints={videoConstraints}
+                                            mirrored={true}
+                                            style={{ width: "100%", borderRadius: 12 }}
+                                        />
 
                                         {/* Overlay countdown */}
-
-                                        {countdown != null && (
-                                            <div style = {{
-                                                position: "absolute",
-                                                inset: 0,
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                fontSize: 96,
-                                                fontWeight: "bold",
-                                                color: "white",
-                                                textShadow: "0 4px 20px rgba(0,0,0,0.6)",
-                                                background: "rgba(0,0,0,0.25)",
-                                                borderRadius: 12,
-                                                pointerEvents: "none",
-                                            }}
+                                        {countdown !== null && (
+                                            <div
+                                                style={{
+                                                    position: "absolute",
+                                                    inset: 0,
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    fontSize: 96,
+                                                    fontWeight: "bold",
+                                                    color: "white",
+                                                    textShadow: "0 4px 20px rgba(0,0,0,0.6)",
+                                                    background: "rgba(0,0,0,0.25)",
+                                                    borderRadius: 12,
+                                                    pointerEvents: "none",
+                                                }}
                                             >
                                                 {countdown}
-                                                </div>
+                                            </div>
                                         )}
                                     </div>
 
                                     {/* Buttons */}
-                                    <div style = {{marginTop: 16, display: "flex", gap:12}}>
+                                    <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
                                         {canTakePhoto && (
                                             <>
                                                 <button style={buttonStyle} onClick={capturePhoto}>
                                                     Take Photo
                                                 </button>
-                                                <label style={{...buttonStyle, cursor: "pointer"}}>
+                                                <label style={{ ...buttonStyle, cursor: "pointer" }}>
                                                     Upload
                                                     <input
                                                         type="file"
-                                                        accept="image /*"
+                                                        accept="image/*"
                                                         onChange={uploadPhoto}
-                                                        style={{ display: "none"}}
-                                                        />
+                                                        style={{ display: "none" }}
+                                                    />
                                                 </label>
                                             </>
                                         )}
                                         {/* redo btn */}
                                         {photoCount > 0 && (
-                                            <button style={{
-                                                ...buttonStyle,
-                                                fontSize: 22,
-                                                padding: "4px 10px"
-                                            }}
-                                            onClick = {redoLastPhoto}
+                                            <button
+                                                style={{
+                                                    ...buttonStyle,
+                                                    fontSize: 22,
+                                                    padding: "4px 10px"
+                                                }}
+                                                onClick={redoLastPhoto}
                                             >
                                                 ⟳
                                             </button>
                                         )}
-
                                     </div>
                                 </>
                             )}
 
-                            {mode === "decorate" && (
+                            {mode === "decorate" &&
                                 stickerOptions.map((src) => (
                                     <img
                                         key={src}
                                         src={src}
                                         alt="sticker"
                                         onClick={() => addSticker(src)}
-                                        style={{ width: 50, cursor: "pointer"}}
+                                        style={{ width: 50, cursor: "pointer" }}
                                     />
-                                ))
-                            )
-                            }
+                                ))}
                         </div>
 
                         {/* Display frame */}
-                            <div>
-                                <canvas ref={canvasRef}
+                        <div>
+                            <canvas
+                                ref={canvasRef}
                                 style={{
-                                    width: 200,
-                                    height: 500,
+                                    width: CANVAS_DISPLAY_WIDTH,
+                                    height: CANVAS_DISPLAY_HEIGHT,
                                     borderRadius: 16,
                                     boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
                                 }}
                                 onMouseDown={handleMouseDown}
                                 onMouseMove={handleMouseMove}
                                 onMouseUp={handleMouseUp}
-                                />
+                            />
 
-                                {mode === "decorate" && (
-                                <div style={{
-                                    marginTop: 16,
-                                    display:"flex",
-                                    justifyContent: "center",
-                                }}>
+                            {mode === "decorate" && (
+                                <div
+                                    style={{
+                                        marginTop: 16,
+                                        display: "flex",
+                                        justifyContent: "center",
+                                    }}
+                                >
                                     <button style={buttonStyle} onClick={downloadPhoto}>
                                         Download
                                     </button>
                                 </div>
-                                )}
-                            </div>
+                            )}
+                        </div>
                     </div>
-                )
-                }
+                )}
             </div>
         </div>
-    )
+    );
 }
 
 // styles
@@ -502,6 +509,7 @@ const centerCol = {
     alignItems: "center",
     gap: 20
 };
+
 const topBar = {
     width: 700,
     height: 60,
@@ -510,7 +518,8 @@ const topBar = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-}
+};
+
 const buttonStyle = {
     padding: "10px 20px",
     fontSize: 20,
@@ -523,6 +532,7 @@ const buttonStyle = {
 };
 
 const row = { display: "flex", gap: 40, alignItems: "flex-start" };
+
 const frameThumb = {
     width: 180,
     cursor: "pointer",
@@ -532,15 +542,15 @@ const frameThumb = {
 
 const titleBar = {
     margin: 0,
-    lineHeight: "60px",      // vertical center
-    textAlign: "center",     // horizontal center
-    width: "100%",            // occupy full width of top bar
-}
+    lineHeight: "60px",
+    textAlign: "center",
+    width: "100%",
+};
 
 const mainContent = {
-    height: 600, // fixed content height
+    height: 760,
     width: 700,
     display: "flex",
     justifyContent: "center",
     alignItems: "flex-start",
-}
+};
