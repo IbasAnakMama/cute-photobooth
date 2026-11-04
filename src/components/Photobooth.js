@@ -17,12 +17,8 @@ const stickerOptions = [
 const videoConstraints = { width: 953, height: 599, facingMode: "user" };
 const SLOT_WIDTH = 953;
 const SLOT_HEIGHT = 599;
-
-// ukuran tampilan frame di layar (ubah di sini kalau mau lebih besar/kecil)
 const CANVAS_DISPLAY_WIDTH = 260;
 const CANVAS_DISPLAY_HEIGHT = 650;
-
-// dipindah ke luar komponen supaya tidak dibuat ulang tiap render
 const slots = [
     { x: 123, y: 78 },
     { x: 123, y: 697 },
