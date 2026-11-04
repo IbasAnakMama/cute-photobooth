@@ -1,12 +1,15 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import Webcam from "react-webcam";
 
+const JJK_FRAME = "/assets/frames/jjk-frame.png";
+
 const frameOptions = [
     "/assets/frames/heart-frame.png",
     "/assets/frames/heart-frame-2.png",
     "/assets/frames/heart-frame-3.png",
     "/assets/frames/heart-frame-4.png",
     "/assets/frames/heart-frame-5.png",
+    JJK_FRAME,
 ];
 
 const stickerOptions = [
@@ -15,16 +18,37 @@ const stickerOptions = [
 ];
 
 const videoConstraints = { width: 953, height: 599, facingMode: "user" };
-const SLOT_WIDTH = 953;
-const SLOT_HEIGHT = 599;
+
+// konfigurasi slot default (frame heart)
+const DEFAULT_CONFIG = {
+    slotWidth: 953,
+    slotHeight: 599,
+    slots: [
+        { x: 123, y: 78 },
+        { x: 123, y: 697 },
+        { x: 123, y: 1286 },
+        { x: 123, y: 1885 }
+    ]
+};
+
+// konfigurasi khusus per frame (kalau tidak ada di sini, pakai DEFAULT_CONFIG)
+const FRAME_CONFIGS = {
+    [JJK_FRAME]: {
+        slotWidth: 820,
+        slotHeight: 515,
+        slots: [
+            { x: 190, y: 252 },
+            { x: 190, y: 885 },
+            { x: 190, y: 1518 },
+            { x: 190, y: 2151 }
+        ]
+    }
+};
+
+const getFrameConfig = frame => FRAME_CONFIGS[frame] || DEFAULT_CONFIG;
+
 const CANVAS_DISPLAY_WIDTH = 260;
 const CANVAS_DISPLAY_HEIGHT = 650;
-const slots = [
-    { x: 123, y: 78 },
-    { x: 123, y: 697 },
-    { x: 123, y: 1286 },
-    { x: 123, y: 1885 }
-];
 
 export default function PhotoBooth() {
     const webcamRef = useRef(null);
@@ -46,11 +70,15 @@ export default function PhotoBooth() {
     const [draggingSticker, setDraggingSticker] = useState(null);
     const [selectedSticker, setSelectedSticker] = useState(null);
 
+    // slot sesuai frame yang dipilih
+    const { slotWidth, slotHeight, slots } = getFrameConfig(selectedFrame);
+
     // draw canvas
     const drawCanvas = useCallback(() => {
         const canvas = canvasRef.current;
         if (!canvas || !frameImgRef.current) return;
 
+        const { slotWidth, slotHeight, slots } = getFrameConfig(selectedFrame);
         const ctx = canvas.getContext("2d");
 
         const frameWidth = frameImgRef.current.width;
@@ -69,7 +97,7 @@ export default function PhotoBooth() {
 
             ctx.save();
             ctx.beginPath();
-            ctx.rect(slot.x, slot.y, SLOT_WIDTH, SLOT_HEIGHT);
+            ctx.rect(slot.x, slot.y, slotWidth, slotHeight);
             ctx.clip();
             ctx.drawImage(p.img, dx, dy, drawW, drawH);
             ctx.restore();
@@ -85,7 +113,7 @@ export default function PhotoBooth() {
                 ctx.strokeRect(s.x, s.y, 150, 150);
             }
         });
-    }, [photos, stickers, selectedSticker]);
+    }, [photos, stickers, selectedSticker, selectedFrame]);
 
     // useEffects
 
@@ -127,9 +155,9 @@ export default function PhotoBooth() {
     const addPhoto = img => {
         if (photoCount >= 4) return;
 
-        const scale = SLOT_WIDTH / img.width;
+        const scale = slotWidth / img.width;
         const drawH = img.height * scale;
-        const offsetY = drawH > SLOT_HEIGHT ? (SLOT_HEIGHT - drawH) / 2 : 0;
+        const offsetY = drawH > slotHeight ? (slotHeight - drawH) / 2 : 0;
 
         setPhotos(p => [
             ...p,
@@ -255,8 +283,8 @@ export default function PhotoBooth() {
 
                 p.offsetX = x - slot.x - dragOffset.x;
                 p.offsetY = y - slot.y - dragOffset.y;
-                p.offsetX = Math.min(Math.max(p.offsetX, SLOT_WIDTH - w), 0);
-                p.offsetY = Math.min(Math.max(p.offsetY, SLOT_HEIGHT - h), 0);
+                p.offsetX = Math.min(Math.max(p.offsetX, slotWidth - w), 0);
+                p.offsetY = Math.min(Math.max(p.offsetY, slotHeight - h), 0);
 
                 return updated;
             });
