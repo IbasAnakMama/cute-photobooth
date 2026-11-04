@@ -8,7 +8,6 @@ const frameOptions = [
     "/assets/frames/heart-frame-2.png",
     "/assets/frames/heart-frame-3.png",
     "/assets/frames/heart-frame-4.png",
-    "/assets/frames/heart-frame-5.png",
     JJK_FRAME,
 ];
 
@@ -18,8 +17,6 @@ const stickerOptions = [
 ];
 
 const videoConstraints = { width: 953, height: 599, facingMode: "user" };
-
-// konfigurasi slot default (frame heart)
 const DEFAULT_CONFIG = {
     slotWidth: 953,
     slotHeight: 599,
@@ -30,8 +27,6 @@ const DEFAULT_CONFIG = {
         { x: 123, y: 1885 }
     ]
 };
-
-// konfigurasi khusus per frame (kalau tidak ada di sini, pakai DEFAULT_CONFIG)
 const FRAME_CONFIGS = {
     [JJK_FRAME]: {
         slotWidth: 820,
@@ -69,11 +64,8 @@ export default function PhotoBooth() {
     const [stickers, setStickers] = useState([]);
     const [draggingSticker, setDraggingSticker] = useState(null);
     const [selectedSticker, setSelectedSticker] = useState(null);
-
-    // slot sesuai frame yang dipilih
     const { slotWidth, slotHeight, slots } = getFrameConfig(selectedFrame);
 
-    // draw canvas
     const drawCanvas = useCallback(() => {
         const canvas = canvasRef.current;
         if (!canvas || !frameImgRef.current) return;
@@ -115,9 +107,6 @@ export default function PhotoBooth() {
         });
     }, [photos, stickers, selectedSticker, selectedFrame]);
 
-    // useEffects
-
-    // load frame
     useEffect(() => {
         if (!selectedFrame) return;
         const img = new Image();
@@ -129,7 +118,6 @@ export default function PhotoBooth() {
         };
     }, [selectedFrame]);
 
-    // redraw tiap ada perubahan
     useEffect(() => {
         drawCanvas();
     }, [drawCanvas, frameReady, photoCount]);
@@ -151,7 +139,6 @@ export default function PhotoBooth() {
         }
     };
 
-    // photos
     const addPhoto = img => {
         if (photoCount >= 4) return;
 
